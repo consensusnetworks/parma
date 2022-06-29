@@ -25,29 +25,34 @@ __export(IoTexService_exports, {
   newIoTexService: () => newIoTexService
 });
 module.exports = __toCommonJS(IoTexService_exports);
-var import_Base = require("./Base");
-var import_iotex_antenna = __toESM(require("iotex-antenna"), 1);
+var import_iotex_antenna = __toESM(require("iotex-antenna"));
 var Network = /* @__PURE__ */ ((Network2) => {
   Network2["Mainnet"] = "mainnet";
   Network2["Testnet"] = "testnet";
   return Network2;
 })(Network || {});
-class IoTexService extends import_Base.BaseService {
+class IoTexService {
   constructor(network) {
-    super();
     this.network = network;
-    this.endpoint = `https://api.iotex.one:443`;
+    this.endpoint = "https://api.iotex.one:443";
     this.client = new import_iotex_antenna.default(this.endpoint);
   }
   async getChainMetadata() {
-    const ret = await this.client.iotx.getChainMeta({});
-    console.log(ret.chainMeta);
-    return 22;
+    const meta = await this.client.iotx.getChainMeta({});
+    return meta;
+  }
+  async getActions() {
+    const actions = await this.client.iotx.getActions({});
+    return actions;
+  }
+  async getGasPrice() {
+    const { gasPrice } = await this.client.iotx.suggestGasPrice({});
+    return gasPrice;
   }
 }
 async function newIoTexService(network) {
-  if (!network) {
-    network = network || "testnet" /* Testnet */;
+  if (network === void 0) {
+    network = "mainnet" /* Mainnet */;
   }
   return new IoTexService(network);
 }
