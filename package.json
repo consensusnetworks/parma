@@ -2,7 +2,7 @@
   "name": "crawlerr",
   "version": "1.0.0",
   "description": "Chain crawler service",
-  "main": "crawler.js",
+  "main": "bin/cli.js",
   "bin": {
     "crawlerr": "build/cli.js"
   },

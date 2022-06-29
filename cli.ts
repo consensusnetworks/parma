@@ -30,7 +30,7 @@ const args = arg({
 })
 
 // any for now
-async function run(args: any): Promise<void> {
+async function run (args: any): Promise<void> {
   if (args['--help'] !== undefined) {
     print(usage)
     process.exit(0)
@@ -85,7 +85,7 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1)
 })
 
-function print(msg: string | {}): void {
+function print (msg: string | {}): void {
   typeof msg === 'string'
     ? process.stdout.write(`${msg} \n`)
     : process.stdout.write(`${JSON.stringify(msg, null, 2)} \n`)
