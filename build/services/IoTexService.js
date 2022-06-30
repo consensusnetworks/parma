@@ -32,17 +32,77 @@ var Network = /* @__PURE__ */ ((Network2) => {
   return Network2;
 })(Network || {});
 class IoTexService {
-  constructor(network) {
-    this.network = network;
-    this.endpoint = "https://api.iotex.one:443";
+  constructor(opt) {
+    this.network = opt.network;
+    this.endpoint = opt.endpoint;
     this.client = new import_iotex_antenna.default(this.endpoint);
   }
   async getChainMetadata() {
     const meta = await this.client.iotx.getChainMeta({});
     return meta;
   }
-  async getActions() {
-    const actions = await this.client.iotx.getActions({});
+  async getActionByHash(hash) {
+    const action = await this.client.iotx.getActions({
+      byHash: {
+        actionHash: hash,
+        checkPending: true
+      }
+    });
+    return action;
+  }
+  async getBlockMetasByIndex(start, count) {
+    if (start < 0 || count < 0) {
+      throw new Error("start and count must be greater than 0");
+    }
+    if (start === 0) {
+      start = 1;
+    }
+    if (count === 0) {
+      count = 100;
+    }
+    const metas = await this.client.iotx.getBlockMetas({ byIndex: { start: count, count } });
+    return metas;
+  }
+  async getAccountActions(address) {
+    const account = await this.client.iotx.getAccount({
+      address
+    });
+    if (account.accountMeta == null) {
+      return [];
+    }
+    const actions = await this.client.iotx.getActions({
+      byAddr: {
+        address: account.accountMeta.address,
+        start: 1,
+        count: 10
+      }
+    });
+    return actions;
+  }
+  async getActionsByIndex(start, count) {
+    if (start < 0 || count < 0) {
+      throw new Error("start and count must be greater than 0");
+    }
+    if (count === 0) {
+      count = 100;
+    }
+    if (start === 0) {
+      start = 1;
+    }
+    const actions = await this.client.iotx.getActions({
+      byIndex: {
+        start,
+        count
+      }
+    });
+    actions.actionInfo.forEach((info) => {
+      var _a;
+      if (((_a = info.action.core) == null ? void 0 : _a.execution) != null) {
+        info.action.core.execution.data = Buffer.from(info.action.core.execution.data.slice(2)).toString("hex");
+      }
+      info.action.senderPubKey = Buffer.from(info.action.senderPubKey).toString("hex");
+      info.action.signature = Buffer.from(info.action.signature).toString("hex");
+    });
     return actions;
   }
   async getGasPrice() {
@@ -50,11 +110,11 @@ class IoTexService {
     return gasPrice;
   }
 }
-async function newIoTexService(network) {
-  if (network === void 0) {
-    network = "mainnet" /* Mainnet */;
+async function newIoTexService(opt) {
+  if (opt.network === void 0) {
+    opt.network = "mainnet" /* Mainnet */;
   }
-  return new IoTexService(network);
+  return new IoTexService(opt);
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
