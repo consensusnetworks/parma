@@ -1,25 +1,22 @@
 import Antenna from 'iotex-antenna'
 import { IGetActionsResponse, IGetBlockMetasResponse, IGetChainMetaResponse } from 'iotex-antenna/lib/rpc-method/types'
 
-export enum Network {
+export interface IotexServiceOptions {
+  network: IotexNetworkType
+}
+
+export enum IotexNetworkType {
   Mainnet = 'mainnet',
   Testnet = 'testnet'
 }
 
-type Endpoint = 'https://api.iotex.one:443' | 'https://api.testnet.iotex.one:443'
-
-interface ServiceOptions {
-  endpoint: Endpoint
-  network: Network
-}
-
 class IoTexService {
-  network: Network
-  endpoint: Endpoint
+  network: IotexNetworkType
+  endpoint: string
   client: Antenna
-  constructor (opt: ServiceOptions) {
+  constructor (opt: IotexServiceOptions) {
     this.network = opt.network
-    this.endpoint = opt.endpoint
+    this.endpoint = this.network === IotexNetworkType.Mainnet ? 'https://api.iotex.one:443' : 'https://api.testnet.iotex.one:443'
     this.client = new Antenna(this.endpoint)
   }
 
@@ -122,9 +119,9 @@ class IoTexService {
   }
 }
 
-export async function newIoTexService (opt: ServiceOptions): Promise<IoTexService> {
+export async function newIoTexService (opt: IotexServiceOptions): Promise<IoTexService> {
   if (opt.network === undefined) {
-    opt.network = Network.Mainnet
+    opt.network = IotexNetworkType.Mainnet
   }
   return new IoTexService(opt)
 }

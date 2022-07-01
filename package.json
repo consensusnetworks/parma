@@ -1,17 +1,22 @@
 {
-  "name": "crawlerr",
+  "name": "@consensusnetworks/parma",
   "version": "1.0.0",
-  "description": "Chain crawler service",
+  "description": "Multi-chain crawler",
   "main": "bin/cli.js",
   "bin": {
-    "crawlerr": "build/cli.js"
+    "parma": "build/cli.js"
   },
   "scripts": {
-    "test": "tap tests/IoTexService.js --no-coverage --reporter=specy -J --node-arg=--require=tsx",
-    "build": "esbuild cli.ts services/IoTexService.ts --platform=node --target=node16 --format=cjs --outdir=./build"
+    "test": "tap --no-coverage --reporter=specy -J",
+    "build": "esbuild cli.ts lib/s3.ts services/IoTexService.ts services/HeliumService.ts services/AccumulateService.ts --platform=node --target=node16 --format=cjs --outdir=./build"
   },
   "author": "hawyar",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.120.0",
+    "@helium/crypto": "^4.3.1",
+    "@helium/http": "^4.4.0",
+    "@helium/transactions": "^4.3.1",
+    "accumulate.js": "^0.4.0",
     "arg": "^5.0.2",
     "esbuild": "^0.14.47",
     "iotex-antenna": "^0.30.10",

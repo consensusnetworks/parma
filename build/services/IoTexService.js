@@ -21,20 +21,20 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var IoTexService_exports = {};
 __export(IoTexService_exports, {
-  Network: () => Network,
+  IotexNetworkType: () => IotexNetworkType,
   newIoTexService: () => newIoTexService
 });
 module.exports = __toCommonJS(IoTexService_exports);
 var import_iotex_antenna = __toESM(require("iotex-antenna"));
-var Network = /* @__PURE__ */ ((Network2) => {
-  Network2["Mainnet"] = "mainnet";
-  Network2["Testnet"] = "testnet";
-  return Network2;
-})(Network || {});
+var IotexNetworkType = /* @__PURE__ */ ((IotexNetworkType2) => {
+  IotexNetworkType2["Mainnet"] = "mainnet";
+  IotexNetworkType2["Testnet"] = "testnet";
+  return IotexNetworkType2;
+})(IotexNetworkType || {});
 class IoTexService {
   constructor(opt) {
     this.network = opt.network;
-    this.endpoint = opt.endpoint;
+    this.endpoint = this.network === "mainnet" /* Mainnet */ ? "https://api.iotex.one:443" : "https://api.testnet.iotex.one:443";
     this.client = new import_iotex_antenna.default(this.endpoint);
   }
   async getChainMetadata() {
@@ -118,6 +118,6 @@ async function newIoTexService(opt) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  Network,
+  IotexNetworkType,
   newIoTexService
 });
