@@ -1,5 +1,6 @@
 import Antenna from 'iotex-antenna'
 import { IGetActionsResponse, IGetBlockMetasResponse, IGetChainMetaResponse } from 'iotex-antenna/lib/rpc-method/types'
+import { from } from '@iotexproject/iotex-address-ts'
 
 export interface IotexServiceOptions {
   network: IotexNetworkType
@@ -117,11 +118,18 @@ class IoTexService {
     const { gasPrice } = await this.client.iotx.suggestGasPrice({})
     return gasPrice
   }
+
+  convertEthToIotx (eth: string): string {
+    const add = from(eth)
+    return add.string()
+  }
+
+  convertIotxToEth (iotx: string): string {
+    const add = from(iotx)
+    return add.stringEth()
+  }
 }
 
 export async function newIoTexService (opt: IotexServiceOptions): Promise<IoTexService> {
-  if (opt.network === undefined) {
-    opt.network = IotexNetworkType.Mainnet
-  }
   return new IoTexService(opt)
 }

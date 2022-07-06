@@ -6,12 +6,23 @@ import pc from 'picocolors'
 import { newIoTexService, IotexNetworkType } from './services/IotexService'
 import { HeliumServiceOptions, HeliumNetworkType, newHeliumService } from './services/HeliumService'
 import { newAccumulateService, AccumulateNetworkType, AccumulateServiceOptions } from './services/AccumulateService'
-import { uploadToS3 } from './lib/s3'
+import { uploadToS3 } from './aws/S3'
 
 const supportedChains: { [key: string]: [string] } = {
   iotex: ['actions'],
   helium: ['blocks'],
   accumulate: ['transactions']
+}
+
+// type ServiceOptionType = IotexServiceOptions | HeliumServiceOptions | AccumulateServiceOptions
+type ServiceNetworkType = IotexNetworkType | HeliumNetworkType | AccumulateNetworkType
+
+interface CLIServiceConfig {
+  chain: keyof typeof supportedChains
+  command: keyof typeof supportedChains[keyof typeof supportedChains]
+  network: ServiceNetworkType
+  // option: ServiceOptionType
+  output: string
 }
 
 const usage = `
@@ -64,9 +75,9 @@ async function run (args: any): Promise<void> {
     process.exit(0)
   }
 
-  if (supportedChains[args._[0]] === undefined) {
-    console.error(pc.red('Error:'), `Unsupported chain ${args._[0] as string}. Supported chains: ${pc.bold(Object.keys(supportedChains).join(', '))}`)
-    return
+  if (args._.length === 0) {
+    console.log(usage)
+    process.exit(0)
   }
 
   if (args._.length !== 2) {
@@ -74,43 +85,64 @@ async function run (args: any): Promise<void> {
     process.exit(1)
   }
 
-  if (args._.length === 0) {
-    console.log(usage)
-    process.exit(0)
+  if (supportedChains[args._[0]] === undefined) {
+    console.error(pc.red('Error:'), `Unsupported chain ${args._[0] as string}. Supported chains: ${pc.bold(Object.keys(supportedChains).join(', '))}`)
+    process.exit(1)
   }
 
-  const userOptions = {
-    network: args['--net'] as string,
-    count: args['--count'] as number,
-    output: args['--output'] as string
+  const options: CLIServiceConfig = {
+    chain: args._[0],
+    network: args['--net'],
+    command: args._[1],
+    output: args['--output']
   }
 
-  // iotex
-  if (args._[0] === 'iotex') {
+  if (supportedChains[options.chain] === null) {
+    console.error(pc.red('Error:'), `Unsupported chain ${options.chain}`)
+    process.exit(1)
+  }
+
+  if (options.output === undefined) {
+    options.output = process.cwd() + '/output.json'
+    console.log('No output specified, saving to current directory')
+  }
+
+  if (options.chain === 'iotex') {
+    if (options.network === undefined) {
+      options.network = IotexNetworkType.Testnet
+    }
+
     const service = await newIoTexService({
-      network: userOptions.network as IotexNetworkType
+      network: options.network as IotexNetworkType
     })
 
     if (args._[1] === 'actions') {
-      const actions = await service.getActionsByIndex(1, 1000)
+      const meta = await service.getChainMetadata()
 
-      await saveOutput(JSON.stringify(actions, null, 2), userOptions.output)
+      const height = parseInt(meta.chainMeta.height)
+      const trips = Math.ceil(height / 1000)
+
+      for (let i = 0; i < trips; i++) {
+        const actions = await service.getActionsByIndex(i * 1000, 1000)
+        await saveOutput(JSON.stringify(actions, null, 2), options.output)
+      }
+
       console.log(`${pc.bgGreen('Done \u2713')}`)
       process.exit(0)
     }
 
     if (args._[1] === 'blocks') {
       const blocks = await service.getBlockMetasByIndex(1, 1000)
-      await saveOutput(JSON.stringify(blocks, null, 2), userOptions.output)
+      await saveOutput(JSON.stringify(blocks, null, 2), options.output)
 
       console.log(`${pc.bgGreen('Done \u2713')}`)
       process.exit(0)
     }
-    console.log(`${pc.red('Error:')} You must specify an action: e.g. ${pc.bold('crawlerr iotex actions')}`)
+    console.log(`${pc.red('Error:')} You must specify an action: e.g. ${pc.bold('parma iotex actions')}`)
+    process.exit(1)
   }
 
-  // helium
-  if (args._[0] === 'helium') {
+  if (options.chain === 'helium') {
     const heliumOpt: HeliumServiceOptions = {
       network: HeliumNetworkType.Production
     }
@@ -119,7 +151,7 @@ async function run (args: any): Promise<void> {
 
     if (args._[1] === 'blocks') {
       const blocks = await service.getBlocksByHeight(5)
-      await saveOutput(JSON.stringify(blocks, null, 2), userOptions.output)
+      await saveOutput(JSON.stringify(blocks, null, 2), options.output)
 
       console.log(`${pc.bgGreen('Done \u2713')}`)
       process.exit(0)
@@ -129,7 +161,7 @@ async function run (args: any): Promise<void> {
     process.exit(1)
   }
 
-  if (args._[0] === 'accumulate') {
+  if (options.chain === 'accumulate') {
     const accumulateOpt: AccumulateServiceOptions = {
       network: AccumulateNetworkType.Testnet
     }
@@ -178,5 +210,14 @@ async function saveOutput (data: string, dest: string): Promise<void> {
     await uploadToS3(data, dest)
     return
   }
-  console.log(`${pc.red('Error:')} Invalid destination: ${dest}`)
+
+  if (dest.startsWith('/')) {
+    await fs.writeFile(dest, data, 'utf8').catch(err => {
+      console.log(err)
+      process.exit(1)
+    }
+    )
+    return
+  }
+  throw new Error('Unsupported destination')
 }

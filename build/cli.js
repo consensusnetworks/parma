@@ -21,7 +21,7 @@ var import_picocolors = __toESM(require("picocolors"));
 var import_IotexService = require("./services/IotexService");
 var import_HeliumService = require("./services/HeliumService");
 var import_AccumulateService = require("./services/AccumulateService");
-var import_s3 = require("./lib/s3");
+var import_S3 = require("./aws/S3");
 const supportedChains = {
   iotex: ["actions"],
   helium: ["blocks"],
@@ -71,56 +71,74 @@ async function run(args2) {
     console.log(usage);
     process.exit(0);
   }
-  if (supportedChains[args2._[0]] === void 0) {
-    console.error(import_picocolors.default.red("Error:"), `Unsupported chain ${args2._[0]}. Supported chains: ${import_picocolors.default.bold(Object.keys(supportedChains).join(", "))}`);
-    return;
+  if (args2._.length === 0) {
+    console.log(usage);
+    process.exit(0);
   }
   if (args2._.length !== 2) {
     console.log(`${import_picocolors.default.red("Error:")} You must specify an action: e.g. ${import_picocolors.default.bold("crawlerr iotex actions")}`);
     process.exit(1);
   }
-  if (args2._.length === 0) {
-    console.log(usage);
-    process.exit(0);
+  if (supportedChains[args2._[0]] === void 0) {
+    console.error(import_picocolors.default.red("Error:"), `Unsupported chain ${args2._[0]}. Supported chains: ${import_picocolors.default.bold(Object.keys(supportedChains).join(", "))}`);
+    process.exit(1);
   }
-  const userOptions = {
+  const options = {
+    chain: args2._[0],
     network: args2["--net"],
-    count: args2["--count"],
+    command: args2._[1],
     output: args2["--output"]
   };
-  if (args2._[0] === "iotex") {
+  if (supportedChains[options.chain] === null) {
+    console.error(import_picocolors.default.red("Error:"), `Unsupported chain ${options.chain}`);
+    process.exit(1);
+  }
+  if (options.output === void 0) {
+    options.output = process.cwd() + "/output.json";
+    console.log("No output specified, saving to current directory");
+  }
+  if (options.chain === "iotex") {
+    if (options.network === void 0) {
+      options.network = import_IotexService.IotexNetworkType.Testnet;
+    }
     const service = await (0, import_IotexService.newIoTexService)({
-      network: userOptions.network
+      network: options.network
     });
     if (args2._[1] === "actions") {
-      const actions = await service.getActionsByIndex(1, 1e3);
-      await saveOutput(JSON.stringify(actions, null, 2), userOptions.output);
+      const meta = await service.getChainMetadata();
+      const height = parseInt(meta.chainMeta.height);
+      const trips = Math.ceil(height / 1e3);
+      for (let i = 0; i < trips; i++) {
+        const actions = await service.getActionsByIndex(i * 1e3, 1e3);
+        await saveOutput(JSON.stringify(actions, null, 2), options.output);
+      }
       console.log(`${import_picocolors.default.bgGreen("Done \u2713")}`);
       process.exit(0);
     }
     if (args2._[1] === "blocks") {
       const blocks = await service.getBlockMetasByIndex(1, 1e3);
-      await saveOutput(JSON.stringify(blocks, null, 2), userOptions.output);
+      await saveOutput(JSON.stringify(blocks, null, 2), options.output);
       console.log(`${import_picocolors.default.bgGreen("Done \u2713")}`);
       process.exit(0);
     }
-    console.log(`${import_picocolors.default.red("Error:")} You must specify an action: e.g. ${import_picocolors.default.bold("crawlerr iotex actions")}`);
+    console.log(`${import_picocolors.default.red("Error:")} You must specify an action: e.g. ${import_picocolors.default.bold("parma iotex actions")}`);
+    process.exit(1);
   }
-  if (args2._[0] === "helium") {
+  if (options.chain === "helium") {
     const heliumOpt = {
       network: import_HeliumService.HeliumNetworkType.Production
     };
     const service = await (0, import_HeliumService.newHeliumService)(heliumOpt);
     if (args2._[1] === "blocks") {
       const blocks = await service.getBlocksByHeight(5);
-      await saveOutput(JSON.stringify(blocks, null, 2), userOptions.output);
+      await saveOutput(JSON.stringify(blocks, null, 2), options.output);
       console.log(`${import_picocolors.default.bgGreen("Done \u2713")}`);
       process.exit(0);
     }
     console.log(`${import_picocolors.default.red("Error:")} You must specify an action: e.g. ${import_picocolors.default.bold("crawlerr helium blocks")}`);
     process.exit(1);
   }
-  if (args2._[0] === "accumulate") {
+  if (options.chain === "accumulate") {
     const accumulateOpt = {
       network: import_AccumulateService.AccumulateNetworkType.Testnet
     };
@@ -158,8 +176,15 @@ async function saveOutput(data, dest) {
     return;
   }
   if (dest.startsWith("s3://")) {
-    await (0, import_s3.uploadToS3)(data, dest);
+    await (0, import_S3.uploadToS3)(data, dest);
     return;
   }
-  console.log(`${import_picocolors.default.red("Error:")} Invalid destination: ${dest}`);
+  if (dest.startsWith("/")) {
+    await import_promises.default.writeFile(dest, data, "utf8").catch((err) => {
+      console.log(err);
+      process.exit(1);
+    });
+    return;
+  }
+  throw new Error("Unsupported destination");
 }

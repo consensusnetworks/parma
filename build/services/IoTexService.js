@@ -9,23 +9,24 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
+var __copyProps = (to, from2, except, desc) => {
+  if (from2 && typeof from2 === "object" || typeof from2 === "function") {
+    for (let key of __getOwnPropNames(from2))
       if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+        __defProp(to, key, { get: () => from2[key], enumerable: !(desc = __getOwnPropDesc(from2, key)) || desc.enumerable });
   }
   return to;
 };
 var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target, mod));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-var IoTexService_exports = {};
-__export(IoTexService_exports, {
+var IotexService_exports = {};
+__export(IotexService_exports, {
   IotexNetworkType: () => IotexNetworkType,
   newIoTexService: () => newIoTexService
 });
-module.exports = __toCommonJS(IoTexService_exports);
+module.exports = __toCommonJS(IotexService_exports);
 var import_iotex_antenna = __toESM(require("iotex-antenna"));
+var import_iotex_address_ts = require("@iotexproject/iotex-address-ts");
 var IotexNetworkType = /* @__PURE__ */ ((IotexNetworkType2) => {
   IotexNetworkType2["Mainnet"] = "mainnet";
   IotexNetworkType2["Testnet"] = "testnet";
@@ -109,11 +110,16 @@ class IoTexService {
     const { gasPrice } = await this.client.iotx.suggestGasPrice({});
     return gasPrice;
   }
+  convertEthToIotx(eth) {
+    const add = (0, import_iotex_address_ts.from)(eth);
+    return add.string();
+  }
+  convertIotxToEth(iotx) {
+    const add = (0, import_iotex_address_ts.from)(iotx);
+    return add.stringEth();
+  }
 }
 async function newIoTexService(opt) {
-  if (opt.network === void 0) {
-    opt.network = "mainnet" /* Mainnet */;
-  }
   return new IoTexService(opt);
 }
 // Annotate the CommonJS export names for ESM import in node:

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "tap --no-coverage --reporter=specy -J",
-    "build": "esbuild cli.ts lib/s3.ts services/IoTexService.ts services/HeliumService.ts services/AccumulateService.ts --platform=node --target=node16 --format=cjs --outdir=./build"
+    "build": "esbuild cli.ts aws/S3.ts services/IotexService.ts services/HeliumService.ts services/AccumulateService.ts --platform=node --target=node16 --format=cjs --outdir=./build"
   },
   "author": "hawyar",
   "dependencies": {
