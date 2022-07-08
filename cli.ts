@@ -3,10 +3,13 @@
 import arg from 'arg'
 import fs from 'fs/promises'
 import pc from 'picocolors'
-import { newIoTexService, IotexNetworkType } from './services/IotexService'
+import { newIoTexService, IotexNetworkType, IotexServiceOptions } from './services/IotexService'
 import { HeliumServiceOptions, HeliumNetworkType, newHeliumService } from './services/HeliumService'
 import { newAccumulateService, AccumulateNetworkType, AccumulateServiceOptions } from './services/AccumulateService'
 import { uploadToS3 } from './aws/S3'
+import { createSpinner } from 'nanospinner'
+import { createWriteStream } from 'fs'
+import JSONbig from 'json-bigint'
 
 const supportedChains: { [key: string]: [string] } = {
   iotex: ['actions'],
@@ -14,14 +17,14 @@ const supportedChains: { [key: string]: [string] } = {
   accumulate: ['transactions']
 }
 
-// type ServiceOptionType = IotexServiceOptions | HeliumServiceOptions | AccumulateServiceOptions
+type ServiceOptionType = IotexServiceOptions | HeliumServiceOptions | AccumulateServiceOptions
 type ServiceNetworkType = IotexNetworkType | HeliumNetworkType | AccumulateNetworkType
 
 interface CLIServiceConfig {
   chain: keyof typeof supportedChains
   command: keyof typeof supportedChains[keyof typeof supportedChains]
   network: ServiceNetworkType
-  // option: ServiceOptionType
+  option: Partial<ServiceOptionType>
   output: string
 }
 
@@ -81,7 +84,7 @@ async function run (args: any): Promise<void> {
   }
 
   if (args._.length !== 2) {
-    console.log(`${pc.red('Error:')} You must specify an action: e.g. ${pc.bold('crawlerr iotex actions')}`)
+    console.error(`${pc.red('Error:')} You must specify an action: e.g. ${pc.bold('crawlerr iotex actions')}`)
     process.exit(1)
   }
 
@@ -94,7 +97,8 @@ async function run (args: any): Promise<void> {
     chain: args._[0],
     network: args['--net'],
     command: args._[1],
-    output: args['--output']
+    output: args['--output'],
+    option: {}
   }
 
   if (supportedChains[options.chain] === null) {
@@ -104,12 +108,13 @@ async function run (args: any): Promise<void> {
 
   if (options.output === undefined) {
     options.output = process.cwd() + '/output.json'
-    console.log('No output specified, saving to current directory')
+    console.log(pc.yellow('Warning:'), `No output specified. Using ${options.output}`)
   }
 
   if (options.chain === 'iotex') {
     if (options.network === undefined) {
-      options.network = IotexNetworkType.Testnet
+      console.log(pc.yellow('Warning:'), 'No network specified, using mainnet')
+      options.network = IotexNetworkType.Mainnet
     }
 
     const service = await newIoTexService({
@@ -118,17 +123,50 @@ async function run (args: any): Promise<void> {
 
     if (args._[1] === 'actions') {
       const meta = await service.getChainMetadata()
-
       const height = parseInt(meta.chainMeta.height)
+
       const trips = Math.ceil(height / 1000)
 
-      for (let i = 0; i < trips; i++) {
-        const actions = await service.getActionsByIndex(i * 1000, 1000)
-        await saveOutput(JSON.stringify(actions, null, 2), options.output)
-      }
+      const stream = createWriteStream(options.output, {
+        flags: 'a',
+        encoding: 'utf8',
+        highWaterMark: 16 * 1024
+      })
 
-      console.log(`${pc.bgGreen('Done \u2713')}`)
-      process.exit(0)
+      const spinner = createSpinner('Crawling...').start()
+
+      let chunk = ''
+
+      for (let i = 0; i < trips; i++) {
+        const from = height - (i * 1000)
+        const actions = await service.getCreateStakeActionsByIndex(from, 1000)
+
+        if (actions.length === 0) {
+          continue
+        }
+        if (i % 5 === 0) {
+          stream.write(chunk)
+
+          stream.on('error ', (err: any) => {
+            spinner.stop()
+            console.error(pc.red('Error:'), err)
+            process.exit(1)
+          })
+
+          stream.on('finish', () => {
+            spinner.success({ text: `${pc.bgGreen('Done \u2713')}` + '\n' })
+            stream.end()
+            process.exit(0)
+          })
+
+          chunk = ''
+        }
+
+        actions.forEach((action: any) => {
+          // eslint-disable-next-line
+          chunk += JSONbig.stringify(action) + '\n'
+        })
+      }
     }
 
     if (args._[1] === 'blocks') {
@@ -138,6 +176,7 @@ async function run (args: any): Promise<void> {
       console.log(`${pc.bgGreen('Done \u2713')}`)
       process.exit(0)
     }
+
     console.log(`${pc.red('Error:')} You must specify an action: e.g. ${pc.bold('parma iotex actions')}`)
     process.exit(1)
   }
@@ -182,21 +221,6 @@ async function run (args: any): Promise<void> {
   process.exit(1)
 }
 
-process.on('unhandledRejection', (reason) => {
-  console.log(reason as string)
-  process.exit(1)
-})
-
-run(args).catch(err => {
-  if (err.code === 'ARG_UNKNOWN_OPTION') {
-    const errMsg = err.message.split('\n')
-    console.log(`${pc.red('Error: ')} ${errMsg as string}, see ${pc.bold('crawlerr --help')}`)
-    process.exit(1)
-  }
-  console.log(err)
-  process.exit(1)
-})
-
 async function saveOutput (data: string, dest: string): Promise<void> {
   if (dest.startsWith('./') || dest.startsWith('../')) {
     await fs.writeFile(dest, data, 'utf8').catch(err => {
@@ -221,3 +245,18 @@ async function saveOutput (data: string, dest: string): Promise<void> {
   }
   throw new Error('Unsupported destination')
 }
+
+process.on('unhandledRejection', (reason) => {
+  console.log(reason as string)
+  process.exit(1)
+})
+
+run(args).catch(err => {
+  if (err.code === 'ARG_UNKNOWN_OPTION') {
+    const errMsg = err.message.split('\n')
+    console.log(`${pc.red('Error: ')} ${errMsg as string}, see ${pc.bold('crawlerr --help')}`)
+    process.exit(1)
+  }
+  console.log(err)
+  process.exit(1)
+})

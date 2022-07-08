@@ -38,12 +38,12 @@ async function uploadToS3(data, destination) {
     Key: keys.join("/"),
     Body: data
   });
-  const client = await s3Client({});
+  const client = await newS3Client({});
   await client.send(upload).catch((err) => {
     throw new Error(err);
   });
 }
-async function s3Client(opt) {
+async function newS3Client(opt) {
   if (opt.region === void 0) {
     opt = {
       region: "us-east-2"

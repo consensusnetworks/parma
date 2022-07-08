@@ -6,8 +6,6 @@
 
 ## Usage
 
-### Install
-
 Install the CLI using npm
 
 ```bash

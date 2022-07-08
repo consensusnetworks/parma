@@ -20,14 +20,14 @@ export async function uploadToS3 (data: string, destination: string): Promise<vo
     Body: data
   })
 
-  const client = await s3Client({})
+  const client = await newS3Client({})
 
   await client.send(upload).catch(err => {
     throw new Error(err)
   })
 }
 
-async function s3Client (opt: S3ClientConfig): Promise<S3Client> {
+async function newS3Client (opt: S3ClientConfig): Promise<S3Client> {
   if (opt.region === undefined) {
     opt = {
       region: 'us-east-2'

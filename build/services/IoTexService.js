@@ -80,6 +80,40 @@ class IoTexService {
     });
     return actions;
   }
+  async getCreateStakeActionsByIndex(start, count) {
+    const actions = await this.getActionsByIndex(start, count);
+    if (actions.length === 0) {
+      throw new Error("Failed to get actions");
+    }
+    const filtered = actions.filter((b) => {
+      var _a;
+      return ((_a = b.action.core) == null ? void 0 : _a.stakeCreate) != null;
+    }).map((b) => {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q;
+      if (((_b = (_a = b.action.core) == null ? void 0 : _a.stakeCreate) == null ? void 0 : _b.payload) != null) {
+        b.action.core.stakeCreate.payload = b.action.core.stakeCreate.payload.toString();
+      }
+      if (((_c = b.action.core) == null ? void 0 : _c.execution) != null) {
+        b.action.core.execution.data = Buffer.from(b.action.core.execution.data.slice(2)).toString("hex");
+      }
+      b.action.senderPubKey = Buffer.from(b.action.senderPubKey).toString("hex");
+      b.action.signature = Buffer.from(b.action.signature).toString("hex");
+      if (((_e = (_d = b.action.core) == null ? void 0 : _d.stakeCreate) == null ? void 0 : _e.stakedAmount) === void 0 || ((_g = (_f = b.action.core) == null ? void 0 : _f.stakeCreate) == null ? void 0 : _g.stakedDuration) === void 0 || ((_i = (_h = b.action.core) == null ? void 0 : _h.stakeCreate) == null ? void 0 : _i.autoStake) === void 0) {
+        throw new Error("Failed to get actions");
+      }
+      const r = {
+        type: "create_stake",
+        datestring: "datestring",
+        address: b.action.senderPubKey,
+        staked_candidate: (_k = (_j = b.action.core) == null ? void 0 : _j.stakeCreate) == null ? void 0 : _k.candidateName,
+        staked_amount: (_m = (_l = b.action.core) == null ? void 0 : _l.stakeCreate) == null ? void 0 : _m.stakedAmount.toString(),
+        staked_duration: (_o = (_n = b.action.core) == null ? void 0 : _n.stakeCreate) == null ? void 0 : _o.stakedDuration,
+        auto_stake: (_q = (_p = b.action.core) == null ? void 0 : _p.stakeCreate) == null ? void 0 : _q.autoStake
+      };
+      return r;
+    });
+    return filtered;
+  }
   async getActionsByIndex(start, count) {
     if (start < 0 || count < 0) {
       throw new Error("start and count must be greater than 0");
@@ -96,15 +130,10 @@ class IoTexService {
         count
       }
     });
-    actions.actionInfo.forEach((info) => {
-      var _a;
-      if (((_a = info.action.core) == null ? void 0 : _a.execution) != null) {
-        info.action.core.execution.data = Buffer.from(info.action.core.execution.data.slice(2)).toString("hex");
-      }
-      info.action.senderPubKey = Buffer.from(info.action.senderPubKey).toString("hex");
-      info.action.signature = Buffer.from(info.action.signature).toString("hex");
-    });
-    return actions;
+    if (actions.actionInfo == null) {
+      throw new Error("Failed to get actions");
+    }
+    return actions.actionInfo;
   }
   async getGasPrice() {
     const { gasPrice } = await this.client.iotx.suggestGasPrice({});
