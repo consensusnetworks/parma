@@ -1,19 +1,26 @@
 {
   "name": "@consensusnetworks/parma",
   "version": "1.0.0",
-  "main": "bin/cli.js",
+  "main": "build/cjs/crawler.js",
+  "exports": {
+    "import": "./build/esm/crawler.js",
+    "require": "./build/cjs/crawler.js"
+  },
   "bin": {
-    "parma": "build/cli.js"
+    "parma": "build/cjs/cli.js"
   },
   "scripts": {
     "test": "tap --no-coverage --reporter=specy -J",
-    "build": "esbuild cli.ts aws/** services/** --platform=node --target=node16 --format=cjs --outdir=./build"
+    "build:cjs": "esbuild crawler.ts cli.ts aws/** services/** --platform=node --target=node16 --format=cjs --outdir=./build/cjs",
+    "build:esm": "esbuild crawler.ts cli.ts aws/** services/** --platform=node --target=node16 --format=esm --outdir=./build/esm",
+    "build": "npm run build:cjs && npm run build:esm"
   },
   "author": "hawyar",
   "dependencies": {
     "@aws-sdk/client-athena": "^3.121.0",
     "@aws-sdk/client-glue": "^3.121.0",
     "@aws-sdk/client-s3": "^3.120.0",
+    "@aws-sdk/lib-storage": "^3.121.0",
     "@helium/crypto": "^4.3.1",
     "@helium/http": "^4.4.0",
     "@helium/transactions": "^4.3.1",

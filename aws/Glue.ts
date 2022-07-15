@@ -1,4 +1,4 @@
-import { GlueClient, GlueClientConfig, GetDatabaseCommand, GetTablesCommand } from '@aws-sdk/client-glue'
+import { GlueClient, GlueClientConfig, GetDatabaseCommand, GetTablesCommand, GetTableCommand } from '@aws-sdk/client-glue'
 import { defaultProvider } from '@aws-sdk/credential-provider-node'
 
 async function newGlueClient (opt: GlueClientConfig): Promise<GlueClient> {
@@ -57,6 +57,41 @@ export async function getDatabaseMetadata (name: string): Promise<DatabaseMetada
   }
 }
 
+export async function getTableMetadata (databaseName: string, tableName: string): Promise<string> {
+  if (databaseName === '') {
+    throw new Error('database name cannot be empty')
+  }
+
+  if (tableName === '') {
+    throw new Error('table name cannot be empty')
+  }
+
+  const glue = await newGlueClient({})
+
+  const table = new GetTableCommand({
+    DatabaseName: databaseName,
+    Name: tableName
+  })
+
+  const result = await glue.send(table)
+
+  if (result.$metadata.httpStatusCode !== 200) {
+    if (result.$metadata.httpStatusCode === 400) {
+      throw new Error('Table not found')
+    }
+
+    throw new Error('Failed to retrieve table metadata')
+  }
+
+  if (result.Table === undefined) {
+    throw new Error('Failed to retrieve table metadata')
+  }
+
+  console.log(result.Table)
+
+  return 'ww'
+}
+
 export async function getDatabaseTables (name: string): Promise<any> {
   if (name === '') {
     throw new Error('Database name cannot be empty')
@@ -79,3 +114,11 @@ export async function getDatabaseTables (name: string): Promise<any> {
   }
   return result.TableList
 }
+
+async function main (): Promise<void> {
+  const t = await getTableMetadata('casimir_etl_database_dev', 'casimir_etl_event_table_dev')
+
+  console.log(t)
+}
+
+main().catch(err => console.log(err))

@@ -1,6 +1,8 @@
 import Antenna from 'iotex-antenna'
 import { IActionInfo, IGetBlockMetasResponse, IGetChainMetaResponse } from 'iotex-antenna/lib/rpc-method/types'
 import { from } from '@iotexproject/iotex-address-ts'
+import { CandidateRegister, CandidateUpdate, StakeRestake, StakeWithdraw, StakeUnstake, StakeAddDeposit, ClaimFromRewardingFund, StakeCreate, StakeTransferOwnership } from 'iotex-antenna/lib/action/types'
+import { DepositToRewardingFund, GrantReward } from 'iotex-antenna/protogen/proto/types/action_pb'
 
 export interface IotexServiceOptions {
   network: IotexNetworkType
@@ -11,12 +13,26 @@ export enum IotexNetworkType {
   Testnet = 'testnet'
 }
 
-interface CreateStakeTableColumn {
+export interface AllIotexGovernanceActions {
+  grantReward: GrantReward[]
+  claimFromRewardingFund: ClaimFromRewardingFund[]
+  depositToRewardingFund: DepositToRewardingFund[]
+  candidateRegister: CandidateRegister[]
+  candidateUpdate: CandidateUpdate[]
+  createStake: StakeCreate[]
+  stakeRestake: StakeRestake[]
+  depositToStake: StakeAddDeposit[]
+  transferStake: StakeTransferOwnership[]
+  stakeUnstake: StakeUnstake[]
+  stakeWithdraw: StakeWithdraw[]
+}
+
+export interface CreateStakeTableColumns {
   type: string
   datestring: string
   address: string
   staked_candidate: string
-  staked_amount: string
+  staked_amount: number
   staked_duration: number
   auto_stake: boolean
 }
@@ -26,7 +42,7 @@ class IoTexService {
   endpoint: string
   client: Antenna
   constructor (opt: IotexServiceOptions) {
-    this.network = opt.network
+    this.network = IotexNetworkType.Mainnet
     this.endpoint = this.network === IotexNetworkType.Mainnet ? 'https://api.iotex.one:443' : 'https://api.testnet.iotex.one:443'
     this.client = new Antenna(this.endpoint)
   }
@@ -83,7 +99,39 @@ class IoTexService {
     return actions
   }
 
-  async getCreateStakeActionsByIndex (start: number, count: number): Promise<CreateStakeTableColumn[]> {
+  async getServerMeta (): Promise<any> {
+    const meta = await this.client.iotx.getServerMeta({})
+    console.log(meta)
+  }
+
+  async getBlocksByIndex (start: number, count: number): Promise<any> {
+  }
+
+  async getAllGovernanceActions (start: number, count: number): Promise<Partial<AllIotexGovernanceActions>> {
+    const actions = await this.getActionsByIndex(start, count)
+
+    if (actions.length === 0) {
+      throw new Error('Failed to get actions')
+    }
+
+    const grantReward = actions.filter(b => b.action.core?.grantReward != null).map(b => {
+      return b.action.core?.grantReward
+    })
+
+    if (grantReward.length === 0 || grantReward === undefined) {
+      throw new Error('Failed to get grantReward')
+    }
+
+    console.log(JSON.stringify(grantReward[0], null, 2))
+
+    // const claimFromRewardingFund = actions.filter(b => b.action.core?.claimFromRewardingFund != null)
+
+    // const depositToRewardingFund = actions.filter(b => b.action.core?.depositToRewardingFund != null)
+
+    return { }
+  }
+
+  async getCreateStakeActionsByIndex (start: number, count: number): Promise<CreateStakeTableColumns[]> {
     const actions = await this.getActionsByIndex(start, count)
 
     if (actions.length === 0) {
@@ -105,16 +153,15 @@ class IoTexService {
         throw new Error('Failed to get actions')
       }
 
-      const r: CreateStakeTableColumn = {
+      return {
         type: 'create_stake',
-        datestring: 'datestring',
+        datestring: new Date(b.timestamp.seconds * 1000).toISOString().split('T')[0],
         address: b.action.senderPubKey,
         staked_candidate: b.action.core?.stakeCreate?.candidateName,
-        staked_amount: b.action.core?.stakeCreate?.stakedAmount.toString(),
+        staked_amount: parseInt(b.action.core?.stakeCreate?.stakedAmount),
         staked_duration: b.action.core?.stakeCreate?.stakedDuration,
         auto_stake: b.action.core?.stakeCreate?.autoStake
       }
-      return r
     })
     return filtered
   }
@@ -162,6 +209,8 @@ class IoTexService {
   }
 }
 
-export async function newIoTexService (opt: IotexServiceOptions): Promise<IoTexService> {
-  return new IoTexService(opt)
+export async function newIotexService (opt?: IotexServiceOptions): Promise<IoTexService> {
+  return new IoTexService({
+    network: IotexNetworkType.Mainnet
+  })
 }

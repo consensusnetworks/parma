@@ -18,11 +18,13 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var S3_exports = {};
 __export(S3_exports, {
+  newS3Client: () => newS3Client,
   uploadToS3: () => uploadToS3
 });
 module.exports = __toCommonJS(S3_exports);
 var import_client_s3 = require("@aws-sdk/client-s3");
 var import_credential_provider_node = require("@aws-sdk/credential-provider-node");
+var import_lib_storage = require("@aws-sdk/lib-storage");
 async function uploadToS3(data, destination) {
   if (!destination.startsWith("s3://")) {
     throw new Error("Invalid destination");
@@ -33,18 +35,27 @@ async function uploadToS3(data, destination) {
   if (keys.length === 0) {
     throw new Error("path cannot be empty");
   }
-  const upload = new import_client_s3.PutObjectCommand({
-    Bucket: bucket,
-    Key: keys.join("/"),
-    Body: data
-  });
-  const client = await newS3Client({});
-  await client.send(upload).catch((err) => {
-    throw new Error(err);
-  });
+  try {
+    const s3Client = await newS3Client();
+    const upload = new import_lib_storage.Upload({
+      client: s3Client,
+      params: {
+        Bucket: bucket,
+        Key: keys.join("/"),
+        Body: data
+      },
+      leavePartsOnError: true
+    });
+    upload.on("httpUploadProgress", (progess) => {
+      console.log(`Uploading ${progess.loaded}/${progess.total}`);
+    });
+    await upload.done();
+  } catch (err) {
+    throw new Error("Unable to upload to S3");
+  }
 }
 async function newS3Client(opt) {
-  if (opt.region === void 0) {
+  if ((opt == null ? void 0 : opt.region) === void 0) {
     opt = {
       region: "us-east-2"
     };
@@ -59,5 +70,6 @@ async function newS3Client(opt) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  newS3Client,
   uploadToS3
 });

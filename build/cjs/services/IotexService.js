@@ -22,7 +22,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var IotexService_exports = {};
 __export(IotexService_exports, {
   IotexNetworkType: () => IotexNetworkType,
-  newIoTexService: () => newIoTexService
+  newIotexService: () => newIotexService
 });
 module.exports = __toCommonJS(IotexService_exports);
 var import_iotex_antenna = __toESM(require("iotex-antenna"));
@@ -34,7 +34,7 @@ var IotexNetworkType = /* @__PURE__ */ ((IotexNetworkType2) => {
 })(IotexNetworkType || {});
 class IoTexService {
   constructor(opt) {
-    this.network = opt.network;
+    this.network = "mainnet" /* Mainnet */;
     this.endpoint = this.network === "mainnet" /* Mainnet */ ? "https://api.iotex.one:443" : "https://api.testnet.iotex.one:443";
     this.client = new import_iotex_antenna.default(this.endpoint);
   }
@@ -80,6 +80,30 @@ class IoTexService {
     });
     return actions;
   }
+  async getServerMeta() {
+    const meta = await this.client.iotx.getServerMeta({});
+    console.log(meta);
+  }
+  async getBlocksByIndex(start, count) {
+  }
+  async getAllGovernanceActions(start, count) {
+    const actions = await this.getActionsByIndex(start, count);
+    if (actions.length === 0) {
+      throw new Error("Failed to get actions");
+    }
+    const grantReward = actions.filter((b) => {
+      var _a;
+      return ((_a = b.action.core) == null ? void 0 : _a.grantReward) != null;
+    }).map((b) => {
+      var _a;
+      return (_a = b.action.core) == null ? void 0 : _a.grantReward;
+    });
+    if (grantReward.length === 0 || grantReward === void 0) {
+      throw new Error("Failed to get grantReward");
+    }
+    console.log(JSON.stringify(grantReward[0], null, 2));
+    return {};
+  }
   async getCreateStakeActionsByIndex(start, count) {
     const actions = await this.getActionsByIndex(start, count);
     if (actions.length === 0) {
@@ -101,16 +125,15 @@ class IoTexService {
       if (((_e = (_d = b.action.core) == null ? void 0 : _d.stakeCreate) == null ? void 0 : _e.stakedAmount) === void 0 || ((_g = (_f = b.action.core) == null ? void 0 : _f.stakeCreate) == null ? void 0 : _g.stakedDuration) === void 0 || ((_i = (_h = b.action.core) == null ? void 0 : _h.stakeCreate) == null ? void 0 : _i.autoStake) === void 0) {
         throw new Error("Failed to get actions");
       }
-      const r = {
+      return {
         type: "create_stake",
-        datestring: "datestring",
+        datestring: new Date(b.timestamp.seconds * 1e3).toISOString().split("T")[0],
         address: b.action.senderPubKey,
         staked_candidate: (_k = (_j = b.action.core) == null ? void 0 : _j.stakeCreate) == null ? void 0 : _k.candidateName,
-        staked_amount: (_m = (_l = b.action.core) == null ? void 0 : _l.stakeCreate) == null ? void 0 : _m.stakedAmount.toString(),
+        staked_amount: parseInt((_m = (_l = b.action.core) == null ? void 0 : _l.stakeCreate) == null ? void 0 : _m.stakedAmount),
         staked_duration: (_o = (_n = b.action.core) == null ? void 0 : _n.stakeCreate) == null ? void 0 : _o.stakedDuration,
         auto_stake: (_q = (_p = b.action.core) == null ? void 0 : _p.stakeCreate) == null ? void 0 : _q.autoStake
       };
-      return r;
     });
     return filtered;
   }
@@ -148,11 +171,13 @@ class IoTexService {
     return add.stringEth();
   }
 }
-async function newIoTexService(opt) {
-  return new IoTexService(opt);
+async function newIotexService(opt) {
+  return new IoTexService({
+    network: "mainnet" /* Mainnet */
+  });
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   IotexNetworkType,
-  newIoTexService
+  newIotexService
 });
