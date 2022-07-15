@@ -1,19 +1,21 @@
 {
   "name": "@consensusnetworks/parma",
   "version": "1.0.0",
-  "main": "build/cjs/crawler.js",
+  "main": "dist/crawler.cjs",
   "exports": {
-    "import": "./build/esm/crawler.js",
-    "require": "./build/cjs/crawler.js"
+    "import": "./dist/crawler.mjs",
+    "require": "./dist/crawler.cjs"
   },
   "bin": {
-    "parma": "build/cjs/cli.js"
+    "parma": "dist/cli.cjs"
   },
   "scripts": {
     "test": "tap --no-coverage --reporter=specy -J",
-    "build:cjs": "esbuild crawler.ts cli.ts aws/** services/** --platform=node --target=node16 --format=cjs --outdir=./build/cjs",
-    "build:esm": "esbuild crawler.ts cli.ts aws/** services/** --platform=node --target=node16 --format=esm --outdir=./build/esm",
-    "build": "npm run build:cjs && npm run build:esm"
+    "build:cjs": "esbuild ./lib/Crawler.ts --minify --platform=node --target=node16 --format=cjs --outfile=./dist/crawler.cjs",
+    "build:services": "esbuild ./lib/services/** --minify --platform=node --target=node16 --format=cjs --outdir=./dist/services",
+    "build:esm": "esbuild ./lib/Crawler.ts --minify --platform=node --target=node16 --format=esm --outfile=./dist/crawler.mjs",
+    "build:cli": "esbuild ./lib/Cli.ts --minify --platform=node --target=node16 --format=cjs --outfile=./dist/cli.cjs",
+    "build": "rm -rf ./dist && npm run build:cjs && npm run build:esm && npm run build:cli && npm run build:services"
   },
   "author": "hawyar",
   "dependencies": {

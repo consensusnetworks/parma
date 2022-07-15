@@ -9,7 +9,7 @@ export enum AccumulateNetworkType {
   Testnet = 'testnet'
 }
 
-class AccumulateService {
+export class AccumulateService {
   network: AccumulateNetworkType
   client: Client
   constructor (opt: AccumulateServiceOptions) {

@@ -37,7 +37,7 @@ export interface CreateStakeTableColumns {
   auto_stake: boolean
 }
 
-class IoTexService {
+export class IoTexService {
   network: IotexNetworkType
   endpoint: string
   client: Antenna
