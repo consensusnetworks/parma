@@ -1,1 +1,46 @@
-"use strict";var r=Object.defineProperty;var s=Object.getOwnPropertyDescriptor;var l=Object.getOwnPropertyNames;var m=Object.prototype.hasOwnProperty;var p=(t,e)=>{for(var n in e)r(t,n,{get:e[n],enumerable:!0})},w=(t,e,n,i)=>{if(e&&typeof e=="object"||typeof e=="function")for(let c of l(e))!m.call(t,c)&&c!==n&&r(t,c,{get:()=>e[c],enumerable:!(i=s(e,c))||i.enumerable});return t};var k=t=>w(r({},"__esModule",{value:!0}),t);var A={};p(A,{AccumulateNetworkType:()=>u,AccumulateService:()=>a,newAccumulateService:()=>v});module.exports=k(A);var o=require("accumulate.js"),u=(n=>(n.Mainnet="mainnet",n.Testnet="testnet",n))(u||{});class a{constructor(e){this.network=e.network,this.client=new o.Client((this.network==="mainnet","https://testnet.accumulatenetwork.io/v2"))}}async function v(t){return new a(t)}0&&(module.exports={AccumulateNetworkType,AccumulateService,newAccumulateService});
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var AccumulateService_exports = {};
+__export(AccumulateService_exports, {
+  AccumulateNetworkType: () => AccumulateNetworkType,
+  AccumulateService: () => AccumulateService,
+  newAccumulateService: () => newAccumulateService
+});
+module.exports = __toCommonJS(AccumulateService_exports);
+var import_accumulate = require("accumulate.js");
+var AccumulateNetworkType = /* @__PURE__ */ ((AccumulateNetworkType2) => {
+  AccumulateNetworkType2["Mainnet"] = "mainnet";
+  AccumulateNetworkType2["Testnet"] = "testnet";
+  return AccumulateNetworkType2;
+})(AccumulateNetworkType || {});
+class AccumulateService {
+  constructor(opt) {
+    this.network = opt.network;
+    this.client = new import_accumulate.Client(this.network === "mainnet" /* Mainnet */ ? "https://testnet.accumulatenetwork.io/v2" : "https://testnet.accumulatenetwork.io/v2");
+  }
+}
+async function newAccumulateService(opt) {
+  return new AccumulateService(opt);
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  AccumulateNetworkType,
+  AccumulateService,
+  newAccumulateService
+});

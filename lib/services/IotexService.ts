@@ -1,8 +1,8 @@
 import Antenna from 'iotex-antenna'
-import { IActionInfo, IGetBlockMetasResponse, IGetChainMetaResponse } from 'iotex-antenna/lib/rpc-method/types'
+import { ClientReadableStream, IActionInfo, IGetBlockMetasResponse, IGetChainMetaResponse, IGetReceiptByActionResponse, IGetServerMetaResponse, IStreamBlocksRequest } from 'iotex-antenna/lib/rpc-method/types'
 import { from } from '@iotexproject/iotex-address-ts'
 import { CandidateRegister, CandidateUpdate, StakeRestake, StakeWithdraw, StakeUnstake, StakeAddDeposit, ClaimFromRewardingFund, StakeCreate, StakeTransferOwnership } from 'iotex-antenna/lib/action/types'
-import { DepositToRewardingFund, GrantReward } from 'iotex-antenna/protogen/proto/types/action_pb'
+import { DepositToRewardingFund } from 'iotex-antenna/protogen/proto/types/action_pb'
 
 export interface IotexServiceOptions {
   network: IotexNetworkType
@@ -14,7 +14,7 @@ export enum IotexNetworkType {
 }
 
 export interface AllIotexGovernanceActions {
-  grantReward: GrantReward[]
+  grantReward: any[]
   claimFromRewardingFund: ClaimFromRewardingFund[]
   depositToRewardingFund: DepositToRewardingFund[]
   candidateRegister: CandidateRegister[]
@@ -75,8 +75,37 @@ export class IoTexService {
       count = 100
     }
 
-    const metas = await this.client.iotx.getBlockMetas({ byIndex: { start: count, count: count } })
+    const metas = await this.client.iotx.getBlockMetas({ byIndex: { start: start, count: count } })
+
     return metas
+  }
+
+  async getBlockMetaByHash (hash: string): Promise< IGetBlockMetasResponse> {
+    const metas = await this.client.iotx.getBlockMetas({
+      byHash: {
+        blkHash: hash
+      }
+    })
+    return metas
+  }
+
+  async getBlockLogs (hash: string): Promise<any> {
+    const s = await this.client.iotx.getLogs({
+      filter: {
+        address: [],
+        topics: []
+      },
+      byBlock: {
+        blockHash: Buffer.from(hash, 'hex')
+      }
+    })
+
+    return s
+  }
+
+  async streamBlocks (): Promise<ClientReadableStream<IStreamBlocksRequest>> {
+    const stream = await this.client.iotx.streamBlocks({})
+    return stream
   }
 
   async getAccountActions (address: string): Promise<any> {
@@ -99,15 +128,22 @@ export class IoTexService {
     return actions
   }
 
-  async getServerMeta (): Promise<any> {
+  async getServerMeta (): Promise<IGetServerMetaResponse> {
     const meta = await this.client.iotx.getServerMeta({})
-    console.log(meta)
+    return meta
   }
 
-  async getBlocksByIndex (start: number, count: number): Promise<any> {
+  async testme (start: number, count: number): Promise<any> {
+    const c = await this.client.iotx.getBlockMetas({
+      byIndex: {
+        start,
+        count
+      }
+    })
+    return c
   }
 
-  async getAllGovernanceActions (start: number, count: number): Promise<Partial<AllIotexGovernanceActions>> {
+  async getGrantRewardActions (start: number, count: number): Promise<any> {
     const actions = await this.getActionsByIndex(start, count)
 
     if (actions.length === 0) {
@@ -115,20 +151,42 @@ export class IoTexService {
     }
 
     const grantReward = actions.filter(b => b.action.core?.grantReward != null).map(b => {
-      return b.action.core?.grantReward
+      b.action.senderPubKey = Buffer.from(b.action.senderPubKey).toString('hex')
+      b.action.signature = Buffer.from(b.action.signature).toString('hex')
+
+      return {
+        type: 'grant_reward',
+        datestring: new Date(b.timestamp.seconds * 1000).toISOString().split('T')[0],
+        address: '',
+        grant_type: b.action.core?.grantReward?.type,
+        action_hash: b.actHash,
+        blocks_hash: b.blkHash
+      }
     })
 
     if (grantReward.length === 0 || grantReward === undefined) {
       throw new Error('Failed to get grantReward')
     }
 
-    console.log(JSON.stringify(grantReward[0], null, 2))
+    return actions
+  }
+
+  async getAllGovernanceActions (start: number, count: number): Promise<Partial<AllIotexGovernanceActions>> {
+    const grantRewards = await this.getGrantRewardActions(start, count)
 
     // const claimFromRewardingFund = actions.filter(b => b.action.core?.claimFromRewardingFund != null)
-
     // const depositToRewardingFund = actions.filter(b => b.action.core?.depositToRewardingFund != null)
 
-    return { }
+    return {
+      grantReward
+    }
+  }
+
+  async getTxReceipt (action: string): Promise<IGetReceiptByActionResponse> {
+    const tx = await this.client.iotx.getReceiptByAction({
+      actionHash: action
+    })
+    return tx
   }
 
   async getCreateStakeActionsByIndex (start: number, count: number): Promise<CreateStakeTableColumns[]> {
@@ -156,7 +214,7 @@ export class IoTexService {
       return {
         type: 'create_stake',
         datestring: new Date(b.timestamp.seconds * 1000).toISOString().split('T')[0],
-        address: b.action.senderPubKey,
+        address: '',
         staked_candidate: b.action.core?.stakeCreate?.candidateName,
         staked_amount: parseInt(b.action.core?.stakeCreate?.stakedAmount),
         staked_duration: b.action.core?.stakeCreate?.stakedDuration,
@@ -164,6 +222,17 @@ export class IoTexService {
       }
     })
     return filtered
+  }
+
+  async getActionsByBlockHash (hash: string): Promise<IActionInfo[]> {
+    const actions = await this.client.iotx.getActions({
+      byHash: {
+        actionHash: hash,
+        checkPending: true
+      }
+    })
+
+    return actions.actionInfo
   }
 
   async getActionsByIndex (start: number, count: number): Promise<IActionInfo[]> {
@@ -211,6 +280,18 @@ export class IoTexService {
 
 export async function newIotexService (opt?: IotexServiceOptions): Promise<IoTexService> {
   return new IoTexService({
-    network: IotexNetworkType.Mainnet
+    network: opt?.network ?? IotexNetworkType.Mainnet
   })
 }
+
+// async function run (): Promise<void> {
+//   const s = await newIotexService()
+
+//   const stream = await s.streamBlocks()
+
+//   stream.on('data', b => {
+//     console.log(JSONbig.stringify(b, null, 2))
+//   })
+// }
+
+// run().catch(console.error)

@@ -1,21 +1,19 @@
 {
   "name": "@consensusnetworks/parma",
   "version": "1.0.0",
-  "main": "dist/crawler.cjs",
+  "main": "./dist/crawler.cjs",
+  "type": "commonjs",
   "exports": {
-    "import": "./dist/crawler.mjs",
     "require": "./dist/crawler.cjs"
   },
   "bin": {
-    "parma": "dist/cli.cjs"
+    "parma": "dist/cli.js"
   },
   "scripts": {
     "test": "tap --no-coverage --reporter=specy -J",
-    "build:cjs": "esbuild ./lib/Crawler.ts --minify --platform=node --target=node16 --format=cjs --outfile=./dist/crawler.cjs",
-    "build:services": "esbuild ./lib/services/** --minify --platform=node --target=node16 --format=cjs --outdir=./dist/services",
-    "build:esm": "esbuild ./lib/Crawler.ts --minify --platform=node --target=node16 --format=esm --outfile=./dist/crawler.mjs",
-    "build:cli": "esbuild ./lib/Cli.ts --minify --platform=node --target=node16 --format=cjs --outfile=./dist/cli.cjs",
-    "build": "rm -rf ./dist && npm run build:cjs && npm run build:esm && npm run build:cli && npm run build:services"
+    "build:services": "esbuild ./lib/services/** --platform=node --target=node16 --format=cjs --outdir=./dist/services",
+    "build:cjs": "esbuild ./lib/Crawler.ts --platform=node --target=node16 --format=cjs --outfile=./dist/crawler.cjs",
+    "build": "rm -rf ./dist && npm run build:cjs && npm run build:services"
   },
   "author": "hawyar",
   "dependencies": {
@@ -37,8 +35,11 @@
   },
   "devDependencies": {
     "@types/json-bigint": "^1.0.1",
+    "@types/tap": "^15.0.7",
+    "tap": "^16.3.0",
     "ts-standard": "^11.0.0",
-    "tsx": "^3.6.0"
+    "tsx": "^3.6.0",
+    "typescript": "^4.7.4"
   },
   "ts-standard": {
     "ignore": [

@@ -1,1 +1,59 @@
-"use strict";var c=Object.defineProperty;var l=Object.getOwnPropertyDescriptor;var u=Object.getOwnPropertyNames;var m=Object.prototype.hasOwnProperty;var w=(t,e)=>{for(var i in e)c(t,i,{get:e[i],enumerable:!0})},k=(t,e,i,r)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of u(e))!m.call(t,o)&&o!==i&&c(t,o,{get:()=>e[o],enumerable:!(r=l(e,o))||r.enumerable});return t};var a=t=>k(c({},"__esModule",{value:!0}),t);var H={};w(H,{HeliumNetworkType:()=>s,newHeliumService:()=>p});module.exports=a(H);var n=require("@helium/http"),s=(i=>(i.Production="production",i.Staging="staging",i))(s||{});class g{constructor(e){this.network=e.network,this.client=new n.Client(this.network==="production"?n.Network.production:n.Network.staging)}async getBlocksByHeight(e){if(e<0)throw new Error("height must be greater than 0");e===0&&(e=1);const i=await this.client.blocks.get(e),r=await this.client.stats.get();return console.log(r),i}}async function p(t){return t.network===void 0&&(t.network="staging"),new g(t)}0&&(module.exports={HeliumNetworkType,newHeliumService});
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var HeliumService_exports = {};
+__export(HeliumService_exports, {
+  HeliumNetworkType: () => HeliumNetworkType,
+  newHeliumService: () => newHeliumService
+});
+module.exports = __toCommonJS(HeliumService_exports);
+var import_http = require("@helium/http");
+var HeliumNetworkType = /* @__PURE__ */ ((HeliumNetworkType2) => {
+  HeliumNetworkType2["Production"] = "production";
+  HeliumNetworkType2["Staging"] = "staging";
+  return HeliumNetworkType2;
+})(HeliumNetworkType || {});
+class HeliumService {
+  constructor(opt) {
+    this.network = opt.network;
+    this.client = new import_http.Client(this.network === "production" /* Production */ ? import_http.Network.production : import_http.Network.staging);
+  }
+  async getBlocksByHeight(height) {
+    if (height < 0) {
+      throw new Error("height must be greater than 0");
+    }
+    if (height === 0) {
+      height = 1;
+    }
+    const blocks = await this.client.blocks.get(height);
+    const g = await this.client.stats.get();
+    console.log(g);
+    return blocks;
+  }
+}
+async function newHeliumService(opt) {
+  if (opt.network === void 0) {
+    opt.network = "staging" /* Staging */;
+  }
+  return new HeliumService(opt);
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  HeliumNetworkType,
+  newHeliumService
+});
