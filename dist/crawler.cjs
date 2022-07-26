@@ -35,7 +35,6 @@ var Chain = /* @__PURE__ */ ((Chain2) => {
   Chain2["Accumulate"] = "accumulate";
   return Chain2;
 })(Chain || {});
-const sp = (0, import_nanospinner.createSpinner)();
 const EE = new import_events.default();
 class Crawler {
   constructor(config) {
@@ -49,7 +48,6 @@ class Crawler {
     if (this.config.chain === "iotex" /* Iotex */) {
       const service = await (0, import_IotexService.newIotexService)();
       this.service = service;
-      import_node_fs.default.openSync(this.config.output, "w");
       if (this.config.verbose) {
         this.EE.on("init", () => {
           console.log(`Initialized crawler for: ${this.config.chain}`);
@@ -72,25 +70,26 @@ class Crawler {
     }
     this.running = true;
     if (this.service instanceof import_IotexService.IoTexService) {
-      const a = await this.service.getAllGovernanceActions(12e6, 1e3);
-      console.log(import_json_bigint.default.stringify(a == null ? void 0 : a.grantReward[0], null, 2));
-      const block = await this.service.getBlockMetaByHash("edfe9e7cb3e006e0c0841438de6dfefcdcbfd0e1ffcf91e5bad30879cfa65b99");
-      console.log(import_json_bigint.default.stringify(block, null, 2));
-      console.log(import_json_bigint.default.stringify({
-        type: "grant_reward",
-        datestring: new Date(block.blkMetas[0].timestamp.seconds * 1e3).toISOString().split("T")[0],
-        transfer_amount: block.blkMetas[0].transferAmount,
-        address: block.blkMetas[0].producerAddress
-      }, null, 2));
+      const meta = await this.service.getChainMetadata();
+      const height = parseInt(meta.chainMeta.height);
+      const trips = Math.ceil(height / 1e3);
+      const spinner = (0, import_nanospinner.createSpinner)("Crawling... \n").start();
+      for (let i = 0; i < trips; i++) {
+        spinner.update({ text: `Crawling... ${i}/${trips} 
+` });
+        const data = await this.service.getBlockMetasByIndex(i * 1e3, 1e3);
+        import_node_fs.default.appendFileSync(this.config.output, import_json_bigint.default.stringify(data));
+      }
+      spinner.stop();
       return;
     }
-    throw new Error("Unrecognized service type");
+    throw new Error();
   }
 }
 async function crawler(config) {
   const c = new Crawler({
     chain: (config == null ? void 0 : config.chain) ?? "iotex" /* Iotex */,
-    output: config.output ?? "./output.json",
+    output: config.output,
     verbose: config.verbose ?? false
   });
   await c._init();

@@ -85,10 +85,6 @@ class IoTexService {
     });
     return s;
   }
-  async streamBlocks() {
-    const stream = await this.client.iotx.streamBlocks({});
-    return stream;
-  }
   async getAccountActions(address) {
     const account = await this.client.iotx.getAccount({
       address
@@ -109,41 +105,68 @@ class IoTexService {
     const meta = await this.client.iotx.getServerMeta({});
     return meta;
   }
-  async testme(start, count) {
-    const c = await this.client.iotx.getBlockMetas({
-      byIndex: {
-        start,
-        count
+  async getDepositToRewardingFundActions(start, count) {
+    var _a, _b;
+    const actions = await this.getActionsByIndex(start, count);
+    const depositToRewardingFundActions = [];
+    for (const action of actions) {
+      if (((_b = (_a = action == null ? void 0 : action.action) == null ? void 0 : _a.core) == null ? void 0 : _b.depositToRewardingFund) != null) {
+        depositToRewardingFundActions.push(action.action.core.depositToRewardingFund);
       }
-    });
-    return c;
+    }
+    return depositToRewardingFundActions;
   }
-  async getAllGovernanceActions(start, count) {
+  async getClaimRewardingFundActions(start, count) {
+    var _a, _b;
+    const actions = await this.getActionsByIndex(start, count);
+    const claimRewardingFundActions = [];
+    for (const action of actions) {
+      if (((_b = (_a = action.action) == null ? void 0 : _a.core) == null ? void 0 : _b.claimFromRewardingFund) != null) {
+        claimRewardingFundActions.push(action.action.core.claimFromRewardingFund);
+      }
+    }
+    return claimRewardingFundActions;
+  }
+  async getGrantRewardActions(start, count) {
     const actions = await this.getActionsByIndex(start, count);
     if (actions.length === 0) {
       throw new Error("Failed to get actions");
     }
-    const grantReward = actions.filter((b) => {
+    return await Promise.all(actions.filter((b) => {
       var _a;
       return ((_a = b.action.core) == null ? void 0 : _a.grantReward) != null;
-    }).map((b) => {
+    }).map(async (b) => {
+      var _a, _b, _c, _d;
       b.action.senderPubKey = Buffer.from(b.action.senderPubKey).toString("hex");
       b.action.signature = Buffer.from(b.action.signature).toString("hex");
-      console.log(b.blkHash);
-      return b;
-    });
-    if (grantReward.length === 0 || grantReward === void 0) {
-      throw new Error("Failed to get grantReward");
-    }
-    return {
-      grantReward
-    };
+      const blockMeta = await this.getBlockMetaByHash(b.blkHash);
+      const reciept = await this.getTxReceipt(b.actHash);
+      return {
+        type: "grant_reward",
+        datestring: new Date(b.timestamp.seconds * 1e3).toISOString().split("T")[0],
+        address: blockMeta.blkMetas[0].hash,
+        grant_type: (_b = (_a = b.action.core) == null ? void 0 : _a.grantReward) == null ? void 0 : _b.type,
+        blocks_hash: b.blkHash,
+        receipt: (_d = (_c = reciept.receiptInfo) == null ? void 0 : _c.receipt) == null ? void 0 : _d.contractAddress
+      };
+    }));
   }
-  async getCreateStakeActionsByIndex(start, count) {
+  async getTxReceipt(action) {
+    const tx = await this.client.iotx.getReceiptByAction({
+      actionHash: action
+    });
+    return tx;
+  }
+  async getCreateStakeActions(start, count) {
     const actions = await this.getActionsByIndex(start, count);
     if (actions.length === 0) {
       throw new Error("Failed to get actions");
     }
+    const ss = actions.filter((b) => {
+      var _a;
+      return ((_a = b.action.core) == null ? void 0 : _a.stakeCreate) != null;
+    });
+    console.log(ss);
     const filtered = actions.filter((b) => {
       var _a;
       return ((_a = b.action.core) == null ? void 0 : _a.stakeCreate) != null;
@@ -160,6 +183,7 @@ class IoTexService {
       if (((_e = (_d = b.action.core) == null ? void 0 : _d.stakeCreate) == null ? void 0 : _e.stakedAmount) === void 0 || ((_g = (_f = b.action.core) == null ? void 0 : _f.stakeCreate) == null ? void 0 : _g.stakedDuration) === void 0 || ((_i = (_h = b.action.core) == null ? void 0 : _h.stakeCreate) == null ? void 0 : _i.autoStake) === void 0) {
         throw new Error("Failed to get actions");
       }
+      console.log(b);
       return {
         type: "create_stake",
         datestring: new Date(b.timestamp.seconds * 1e3).toISOString().split("T")[0],

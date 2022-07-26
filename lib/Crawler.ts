@@ -16,7 +16,6 @@ export interface CrawlerConfig {
   verbose: boolean
 }
 
-const sp = createSpinner()
 const EE = new EventEmitter()
 
 class Crawler {
@@ -38,9 +37,8 @@ class Crawler {
       const service = await newIotexService()
       this.service = service
 
-      fs.openSync(this.config.output, 'w')
+      // fs.openSync(this.config.output, 'w')
       // if (!this.isReadbleFile(this.config.output))
-
       if (this.config.verbose) {
         this.EE.on('init', () => {
           console.log(`Initialized crawler for: ${this.config.chain}`)
@@ -48,10 +46,8 @@ class Crawler {
       }
 
       this.EE.emit('init')
-
       return
     }
-
     throw new Error('Unknown chain')
   }
 
@@ -70,46 +66,49 @@ class Crawler {
 
     this.running = true
     if (this.service instanceof IoTexService) {
-      const a = await this.service.getAllGovernanceActions(12000000, 1000)
+      const meta = await this.service.getChainMetadata()
+      const height = parseInt(meta.chainMeta.height)
+      const trips = Math.ceil(height / 1000)
 
-      console.log(JSONbig.stringify(a?.grantReward[0], null, 2))
-      const block = await this.service.getBlockMetaByHash('edfe9e7cb3e006e0c0841438de6dfefcdcbfd0e1ffcf91e5bad30879cfa65b99')
-      console.log(JSONbig.stringify(block, null, 2))
+      const spinner = createSpinner('Crawling... \n').start()
 
-      // return {
-      //   type: 'grant_reward',
-      //   datestring: new Date(b.timestamp.seconds * 1000).toISOString().split('T')[0],
-      //   address: '',
-      //   grant_type: b.action.core?.grantReward?.type
-      // }
+      for (let i = 0; i < trips; i++) {
+        spinner.update({ text: (`Crawling... ${i}/${trips} \n`) })
 
-      console.log(JSONbig.stringify({
-        type: 'grant_reward',
-        datestring: new Date(block.blkMetas[0].timestamp.seconds * 1000).toISOString().split('T')[0],
-        transfer_amount: block.blkMetas[0].transferAmount,
-        address: block.blkMetas[0].producerAddress
-        recepiet: 
-      }, null, 2))
+        const data = await this.service.getBlockMetasByIndex(i * 1000, 1000)
+        fs.appendFileSync(this.config.output, JSONbig.stringify(data))
+      }
 
-      // const meta = await this.service.getChainMetadata()
-      // const height = parseInt(meta.chainMeta.height)
-      // // const trips = Math.ceil(height / 1000)
+      spinner.stop()
+      // const ws = fs.createWriteStream(this.config.output, { flags: 'a+' })
 
-      // const blockMetas = await this.service.getBlockMetasByIndex(height, 1000)
-      // sp.stop()
+      // createStake.forEach(g => {
+      //   ws.write(JSONbig.stringify(g) + '\n')
+      // })
 
-      // const withActions = blockMetas.blkMetas.filter(b => b.numActions > 0)
-      // console.log(JSONbig.stringify(withActions, null, 2))
+      // grantRewards.forEach(g => {
+      //   ws.write(JSONbig.stringify(g) + '\n')
+      // })
+
+      // claims.forEach(g => {
+      //   ws.write(JSONbig.stringify(g) + '\n')
+      // })
+
+      // ws.on('error', err => {
+      //   console.error(err)
+      // })
+
+      // ws.end()
       return
     }
-    throw new Error('Unrecognized service type')
+    throw new Error()
   }
 }
 
 export async function crawler (config: CrawlerConfig): Promise<Crawler> {
   const c = new Crawler({
     chain: config?.chain ?? Chain.Iotex,
-    output: config.output ?? './output.json',
+    output: config.output,
     verbose: config.verbose ?? false
   })
 

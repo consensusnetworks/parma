@@ -10,6 +10,19 @@ Install the CLI using npm
 npm i @consensusnetwork/parma -g
 ```
 
+
+
+## JavaScript API
+```
+const { crawler } = require('@consensusnetworks/parma')
+
+const supercrawler = await crawler({
+  output: './results.json'
+})
+
+await supercrawler.start().catch(console.error)
+```
+
 ## API
 
 ```bash

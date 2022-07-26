@@ -103,10 +103,15 @@ export class IoTexService {
     return s
   }
 
-  async streamBlocks (): Promise<ClientReadableStream<IStreamBlocksRequest>> {
-    const stream = await this.client.iotx.streamBlocks({})
-    return stream
-  }
+  // async streamBlocks (): Promise<ClientReadableStream<IStreamBlocksRequest>> {
+  //   const stream = await this.client.iotx.streamBlocks({})
+
+  //   stream.on('data', (data) => {
+  //     console.log(data)
+  //   })
+
+  //   return stream
+  // }
 
   async getAccountActions (address: string): Promise<any> {
     const account = await this.client.iotx.getAccount({
@@ -133,14 +138,40 @@ export class IoTexService {
     return meta
   }
 
-  async testme (start: number, count: number): Promise<any> {
-    const c = await this.client.iotx.getBlockMetas({
-      byIndex: {
-        start,
-        count
+  // async testme (start: number, count: number): Promise<any> {
+  //   const c = await this.client.iotx.getBlockMetas({
+  //     byIndex: {
+  //       start,
+  //       count
+  //     }
+  //   })
+  //   return c
+  // }
+
+  async getDepositToRewardingFundActions (start: number, count: number): Promise<any[]> {
+    const actions = await this.getActionsByIndex(start, count)
+    const depositToRewardingFundActions: any[] = []
+
+    for (const action of actions) {
+      if (action?.action?.core?.depositToRewardingFund != null) {
+        depositToRewardingFundActions.push(action.action.core.depositToRewardingFund)
       }
-    })
-    return c
+    }
+
+    return depositToRewardingFundActions
+  }
+
+  async getClaimRewardingFundActions (start: number, count: number): Promise<ClaimFromRewardingFund[]> {
+    const actions = await this.getActionsByIndex(start, count)
+
+    const claimRewardingFundActions: ClaimFromRewardingFund[] = []
+
+    for (const action of actions) {
+      if (action.action?.core?.claimFromRewardingFund != null) {
+        claimRewardingFundActions.push(action.action.core.claimFromRewardingFund)
+      }
+    }
+    return claimRewardingFundActions
   }
 
   async getGrantRewardActions (start: number, count: number): Promise<any> {
@@ -150,36 +181,23 @@ export class IoTexService {
       throw new Error('Failed to get actions')
     }
 
-    const grantReward = actions.filter(b => b.action.core?.grantReward != null).map(b => {
+    return await Promise.all(actions.filter(b => b.action.core?.grantReward != null).map(async b => {
       b.action.senderPubKey = Buffer.from(b.action.senderPubKey).toString('hex')
       b.action.signature = Buffer.from(b.action.signature).toString('hex')
+
+      const blockMeta = await this.getBlockMetaByHash(b.blkHash)
+
+      const reciept = await this.getTxReceipt(b.actHash)
 
       return {
         type: 'grant_reward',
         datestring: new Date(b.timestamp.seconds * 1000).toISOString().split('T')[0],
-        address: '',
+        address: blockMeta.blkMetas[0].hash,
         grant_type: b.action.core?.grantReward?.type,
-        action_hash: b.actHash,
-        blocks_hash: b.blkHash
+        blocks_hash: b.blkHash,
+        receipt: reciept.receiptInfo?.receipt?.contractAddress
       }
-    })
-
-    if (grantReward.length === 0 || grantReward === undefined) {
-      throw new Error('Failed to get grantReward')
-    }
-
-    return actions
-  }
-
-  async getAllGovernanceActions (start: number, count: number): Promise<Partial<AllIotexGovernanceActions>> {
-    const grantRewards = await this.getGrantRewardActions(start, count)
-
-    // const claimFromRewardingFund = actions.filter(b => b.action.core?.claimFromRewardingFund != null)
-    // const depositToRewardingFund = actions.filter(b => b.action.core?.depositToRewardingFund != null)
-
-    return {
-      grantReward
-    }
+    }))
   }
 
   async getTxReceipt (action: string): Promise<IGetReceiptByActionResponse> {
@@ -189,12 +207,16 @@ export class IoTexService {
     return tx
   }
 
-  async getCreateStakeActionsByIndex (start: number, count: number): Promise<CreateStakeTableColumns[]> {
+  async getCreateStakeActions (start: number, count: number): Promise<any> {
     const actions = await this.getActionsByIndex(start, count)
 
     if (actions.length === 0) {
       throw new Error('Failed to get actions')
     }
+
+    const ss = actions.filter(b => b.action.core?.stakeCreate != null)
+
+    console.log(ss)
 
     const filtered = actions.filter(b => b.action.core?.stakeCreate != null).map(b => {
       if (b.action.core?.stakeCreate?.payload != null) {
@@ -211,6 +233,8 @@ export class IoTexService {
         throw new Error('Failed to get actions')
       }
 
+      console.log(b)
+
       return {
         type: 'create_stake',
         datestring: new Date(b.timestamp.seconds * 1000).toISOString().split('T')[0],
@@ -221,6 +245,7 @@ export class IoTexService {
         auto_stake: b.action.core?.stakeCreate?.autoStake
       }
     })
+
     return filtered
   }
 
@@ -283,15 +308,3 @@ export async function newIotexService (opt?: IotexServiceOptions): Promise<IoTex
     network: opt?.network ?? IotexNetworkType.Mainnet
   })
 }
-
-// async function run (): Promise<void> {
-//   const s = await newIotexService()
-
-//   const stream = await s.streamBlocks()
-
-//   stream.on('data', b => {
-//     console.log(JSONbig.stringify(b, null, 2))
-//   })
-// }
-
-// run().catch(console.error)
