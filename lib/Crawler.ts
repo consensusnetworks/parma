@@ -51,10 +51,6 @@ class Crawler {
     throw new Error('Unknown chain')
   }
 
-  private isReadbleFile (file: string): boolean {
-    return fs.existsSync(file) && fs.statSync(file).isFile()
-  }
-
   async start (): Promise<void> {
     if (this.running) {
       throw new Error('Crawler is already running')

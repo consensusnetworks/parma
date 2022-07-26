@@ -6,9 +6,6 @@
   "exports": {
     "require": "./dist/crawler.cjs"
   },
-  "bin": {
-    "parma": "dist/cli.js"
-  },
   "scripts": {
     "test": "tap --no-coverage --reporter=specy -J",
     "build:services": "esbuild ./lib/services/** --platform=node --target=node16 --format=cjs --outdir=./dist/services",

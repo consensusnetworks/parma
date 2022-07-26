@@ -58,9 +58,6 @@ class Crawler {
     }
     throw new Error("Unknown chain");
   }
-  isReadbleFile(file) {
-    return import_node_fs.default.existsSync(file) && import_node_fs.default.statSync(file).isFile();
-  }
   async start() {
     if (this.running) {
       throw new Error("Crawler is already running");
